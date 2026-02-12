@@ -172,6 +172,13 @@ elif section == "🔮 Live Prediction":
 
         if user_input.strip() == "":
             st.warning("Please enter a review.")
-        else:
-            # Placeholder prediction
-            st.success("Prediction: Likely to Recommend (Demo Output)")
+        else: # Convert input text into TF-IDF features
+             input_vector = vectorizer.transform([user_input])
+     
+# Predict using trained model
+prediction = model.predict(input_vector)[0]
+
+if prediction == 1:
+    st.success("Prediction: Customer is likely to RECOMMEND this product ✅")
+else:
+    st.error("Prediction: Customer is NOT likely to recommend this product ❌")
