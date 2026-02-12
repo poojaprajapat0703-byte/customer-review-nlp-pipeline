@@ -5,6 +5,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import joblib
+
+# ------------------------------
+# Load Saved Model & Vectorizer
+# ------------------------------
+model = joblib.load("models/rf_model.pkl")
+vectorizer = joblib.load("models/tfidf_vectorizer.pkl")
 
 st.set_page_config(
     page_title="Customer Review Analytics & NLP Pipeline",
