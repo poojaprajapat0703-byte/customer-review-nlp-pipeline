@@ -5,7 +5,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
+import joblib 
 
 # ------------------------------
 # Load Saved Model & Vectorizer
@@ -162,23 +162,23 @@ elif section == "🤖 Model Performance":
 # ------------------------------
 # LIVE PREDICTION
 # ------------------------------
-elif section == "🔮 Live Prediction":
 
-    st.subheader("Live Review Recommendation Prediction")
+user_input = st.text_area("Enter a customer review:")
 
-    user_input = st.text_area("Enter a customer review below:")
+if st.button("Predict Recommendation"):
 
-    if st.button("Predict Recommendation"):
+    if user_input.strip() == "":
+        st.warning("Please enter a review.")
+    else:
+        # Convert text to TF-IDF features
+        input_vector = vectorizer.transform([user_input])
 
-        if user_input.strip() == "":
-            st.warning("Please enter a review.")
-        else: # Convert input text into TF-IDF features
-             input_vector = vectorizer.transform([user_input])
-     
-# Predict using trained model
-prediction = model.predict(input_vector)[0]
+        # Predict
+        prediction = model.predict(input_vector)[0]
 
-if prediction == 1:
-    st.success("Prediction: Customer is likely to RECOMMEND this product ✅")
-else:
-    st.error("Prediction: Customer is NOT likely to recommend this product ❌")
+        if prediction == 1:
+            st.success("Customer is likely to RECOMMEND this product ✅")
+        else:
+            st.error("Customer is NOT likely to recommend this product ❌")
+
+
