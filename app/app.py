@@ -10,7 +10,7 @@ import joblib
 # ------------------------------
 # Load Saved Model & Vectorizer
 # ------------------------------
-model = joblib.load("models/rf_model.pkl")
+model = joblib.load("models/rf_model_text.pkl")
 vectorizer = joblib.load("models/tfidf_vectorizer.pkl")
 
 st.set_page_config(
