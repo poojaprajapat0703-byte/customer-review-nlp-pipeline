@@ -8,14 +8,24 @@ import numpy as np
 import joblib 
 import matplotlib.pyplot as plt
 import seaborn as sns
+from wordcloud import WordCloud
 
-df = pd.read_excel("Womens Clothing Reviews Data.xlsx")
 
-# ------------------------------
-# Load Saved Model & Vectorizer
-# ------------------------------
+df = pd.read_excel("data/Womens Clothing Reviews Data.xlsx")
+
+df = pd.read_excel("data/Womens Clothing Reviews Data.xlsx")
+
+df["combined_review"] = (
+    df["Review Title"].fillna("") + " " + df["Review Text"].fillna("")
+)
+
+# Load models
 model = joblib.load("models/rf_model_text.pkl")
 vectorizer = joblib.load("models/tfidf_vectorizer.pkl")
+lda_model = joblib.load("models/lda_model.pkl")
+count_vectorizer = joblib.load("models/count_vectorizer.pkl")
+
+
 
 st.set_page_config(
     page_title="Customer Review Analytics & NLP Pipeline",
@@ -121,6 +131,41 @@ elif section == "📈 EDA Insights":
     ax3.set_ylabel("Average Rating")
     st.pyplot(fig3)
 
+    # Channel Usage Analysis 
+
+    st.markdown("---")
+    st.subheader("📱 Channel Usage Analysis")
+
+    if "Channel" in df.columns:
+       channel_counts = df["Channel"].value_counts()
+
+       fig4, ax4 = plt.subplots()
+       channel_counts.plot(kind="bar", ax=ax4)
+       ax4.set_ylabel("Number of Reviews")
+       ax4.set_title("Reviews by Channel (Web vs Mobile)")
+       st.pyplot(fig4)
+    else:
+       st.warning("Channel column not found in dataset.")
+
+    # Loaction Analysis
+
+
+    st.markdown("---")
+    st.subheader("📍 Location Analysis")
+
+    if "Location" in df.columns:
+      location_counts = df["Location"].value_counts().head(10)
+
+      fig5, ax5 = plt.subplots(figsize=(10,6))
+      location_counts.plot(kind="bar", ax=ax5)
+      ax5.set_ylabel("Number of Reviews")
+      ax5.set_title("Top 10 Locations by Review Count")
+      plt.xticks(rotation=45)
+      st.pyplot(fig5)
+    else:
+      st.warning("Location column not found in dataset.")
+
+
 
 # ------------------------------
 # SENTIMENT ANALYSIS
@@ -152,6 +197,91 @@ elif section == "😊 Sentiment Analysis":
     ax.set_ylabel("Count")
     st.pyplot(fig)
 
+    st.markdown("---")
+    st.markdown("### ☁️ Word Cloud Analysis")
+
+    # Create combined review column
+    df["combined_review"] = (
+        df["Review Title"].fillna("") + " " + df["Review Text"].fillna("")
+    )
+
+
+
+    # -----------------------------
+    # Positive Word Cloud
+    # -----------------------------
+    positive_text = " ".join(
+        df[df["Sentiment"] == "Positive"]["combined_review"].astype(str)
+    )
+    positive_wc = WordCloud(
+        width=800,
+        height=400,
+        background_color="white"
+    ).generate(positive_text)
+
+    fig1, ax1 = plt.subplots(figsize=(10,5))
+    ax1.imshow(positive_wc, interpolation="bilinear")
+    ax1.axis("off")
+    ax1.set_title("Positive Reviews Word Cloud")
+    st.pyplot(fig1)
+
+
+     # -----------------------------
+    # Negative Word Cloud
+    # -----------------------------
+
+    negative_text = " ".join(
+        df[df["Sentiment"] == "Negative"]["combined_review"].astype(str)
+    )
+
+    negative_wc = WordCloud(
+        width=800,
+        height=400,
+        background_color="white"
+    ).generate(negative_text)
+
+
+    fig2, ax2 = plt.subplots(figsize=(10,5))
+    ax2.imshow(negative_wc, interpolation="bilinear")
+    ax2.axis("off")
+    ax2.set_title("Negative Reviews Word Cloud")
+    st.pyplot(fig2)
+
+
+
+## Sentiment by Category
+    st.markdown("---")
+    st.markdown("### 📊 Sentiment by Category")
+
+    sentiment_category = pd.crosstab(df["Category"], df["Sentiment"])
+
+    fig3, ax3 = plt.subplots(figsize=(10,6))
+    sentiment_category.plot(kind="bar", stacked=True, ax=ax3)
+    ax3.set_ylabel("Number of Reviews")
+    ax3.set_title("Sentiment Distribution by Category")
+    st.pyplot(fig3)
+
+    # Sentiment by Age Group
+
+    st.markdown("---")
+    st.markdown("### 👩‍🦳 Sentiment by Age Group")
+
+    # Create age bins
+    df["Age_Group"] = pd.cut(
+    df["Customer Age"],
+    bins=[0, 20, 30, 40, 50, 60, 100],
+    labels=["<20", "20-30", "30-40", "40-50", "50-60", "60+"]
+)
+
+    sentiment_age = pd.crosstab(df["Age_Group"], df["Sentiment"])
+
+    fig4, ax4 = plt.subplots(figsize=(10,6))
+    sentiment_age.plot(kind="bar", stacked=True, ax=ax4)
+    ax4.set_ylabel("Number of Reviews")
+    ax4.set_title("Sentiment Distribution by Age Group")
+    st.pyplot(fig4)
+
+
 
 # ------------------------------
 # TOPIC MODELING
@@ -174,26 +304,28 @@ elif section == "🧠 Topic Modeling":
 
     st.markdown("---")
 
-    # Example topic distribution (replace later with real LDA output)
-    topic_distribution = {
-        "Fit & Size": 28,
-        "Fabric Quality": 22,
-        "Design Appeal": 18,
-        "Comfort": 20,
-        "Color & Style": 12
-    }
+    #  (replace later with real LDA output)
+    # Transform text using CountVectorizer
+    X_counts = count_vectorizer.transform(df["combined_review"])
+
+# Get topic distribution for each review
+    topic_matrix = lda_model.transform(X_counts)
+
+# Get dominant topic for each review
+    dominant_topics = topic_matrix.argmax(axis=1)
+
+# Count frequency of each topic
+    topic_counts = pd.Series(dominant_topics).value_counts().sort_index()
+
 
     fig, ax = plt.subplots()
-    ax.bar(topic_distribution.keys(), topic_distribution.values())
-    ax.set_title("Topic Distribution")
+    ax.bar(topic_counts.index.astype(str), topic_counts.values)
+    ax.set_xlabel("Topic Number")
     ax.set_ylabel("Number of Reviews")
-    plt.xticks(rotation=45)
+    ax.set_title("Live Topic Distribution (LDA)")
     st.pyplot(fig)
 
 
-# ------------------------------
-# MODEL PERFORMANCE
-# ------------------------------
 # ------------------------------
 # MODEL PERFORMANCE
 # ------------------------------
@@ -261,23 +393,30 @@ elif section == "🤖 Model Performance":
 
 elif section == "🔮 Live Prediction":
 
-    st.subheader("🔮 Live Recommendation Prediction")
+    st.subheader("🔮 Live Recommendation Prediction (Random Forest)")
 
     user_input = st.text_area(
         "Enter a customer review:",
         placeholder="Type a review here..."
     )
 
-    if st.button("Predict Recommendation", key="predict_button"):
+    if st.button("Predict Recommendation"):
 
         if user_input.strip() == "":
             st.warning("⚠️ Please enter a review.")
         else:
+            # Transform text
             input_vector = vectorizer.transform([user_input])
+
+            # Predict using Random Forest
             prediction = model.predict(input_vector)[0]
+            prediction_proba = model.predict_proba(input_vector)[0]
+
+            confidence = round(max(prediction_proba) * 100, 2)
 
             if prediction == 1:
-             st.success("✅ Customer is likely to RECOMMEND this product")
+                st.success("✅ Customer is likely to RECOMMEND this product")
             else:
-             st.error("❌ Customer is NOT likely to recommend this product")
+                st.error("❌ Customer is NOT likely to recommend this product")
 
+            st.info(f"Prediction Confidence: {confidence}%")
